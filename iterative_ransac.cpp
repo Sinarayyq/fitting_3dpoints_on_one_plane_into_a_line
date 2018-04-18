@@ -1,4 +1,4 @@
-////iterative_ransac
+﻿////iterative_ransac
 //#include <iostream>
 //#include <vector>
 //#include <time.h>
@@ -37,12 +37,17 @@
 //	pcl::ModelCoefficients::Ptr coefficients_cylinder;
 //	pcl::ModelCoefficients::Ptr coefficients_cone;
 //
+//	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane;
+//	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cylinder;
+//	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cone;
+//
 //	PatchType();
 //	~PatchType() {};
 //};
 //
 //PatchType::PatchType():plane(0),cylinder(0),cone(0), coefficients_plane(new pcl::ModelCoefficients()), 
-//                       coefficients_cylinder(new pcl::ModelCoefficients()), coefficients_cone(new pcl::ModelCoefficients())
+//                       coefficients_cylinder(new pcl::ModelCoefficients()), coefficients_cone(new pcl::ModelCoefficients()),
+//					cloud_plane(new pcl::PointCloud<pcl::PointXYZ>), cloud_cylinder(new pcl::PointCloud<pcl::PointXYZ>), cloud_cone(new pcl::PointCloud<pcl::PointXYZ>)
 //{
 //	//coefficients_plane = NULL;
 //	//coefficients_cylinder = NULL;
@@ -254,9 +259,9 @@
 //	std::system("pause");
 //	return 0;
 //}
-//
-//
-//
+
+
+
 
 
 
@@ -360,7 +365,7 @@
 
 
 
-
+//Fitting 3D Points(on one plane) To a Line
 #include <iostream>
 #include <vector>
 #include <time.h>
@@ -455,19 +460,97 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr transformCloudByMatrix(pcl::PointCloud<pcl::
 	return transformed_points;
 }
 
-int LinearRegression(pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_points, double &a, double &b)
+//http://mathworld.wolfram.com/LeastSquaresFitting.html
+int LinearRegressionVerticalLeastSquares(pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_points, double &a, double &b)
 {
-	double xsum = 0, x2sum = 0, ysum = 0, xysum = 0;                //variables for sums/sigma of xi,yi,xi^2,xiyi etc
+	double xsum = 0, ysum = 0, x2sum = 0, y2sum = 0, xysum = 0, B = 0, number3 = 0;                //variables for sums/sigma of xi,yi,xi^2,xiyi etc
 	int number = (*transformed_points).size();
 	for (int i = 0; i < number; i++)
 	{
 		xsum = xsum + (*transformed_points)[i].x;                        //calculate sigma(xi)
 		ysum = ysum + (*transformed_points)[i].y;                        //calculate sigma(yi)
 		x2sum = x2sum + pow((*transformed_points)[i].x, 2);                //calculate sigma(x^2i)
+		//y2sum = y2sum + pow((*transformed_points)[i].y, 2);
 		xysum = xysum + (*transformed_points)[i].x * (*transformed_points)[i].y;                    //calculate sigma(xi*yi)
+
 	}
+	//number3 = pow(number, 3);
+	//B = (y2sum - number3 * pow(ysum, 2) - x2sum + number3 * pow(xsum, 2)) / (number3 * ysum * xsum - xysum) / 2;
+	//a = -B / number3;
+	//b = ysum / number - a*xsum / number;
 	a = (number * xysum - xsum * ysum) / (number * x2sum - xsum * xsum);            //calculate slope
 	b = (x2sum * ysum - xsum * xysum) / (x2sum * number - xsum * xsum);            //calculate intercept
+
+	return 0;
+}
+
+//http://mathworld.wolfram.com/LeastSquaresFittingPerpendicularOffsets.html
+int LinearRegressionPerpendicularLeastSquares(pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_points, double &a, double &b)
+{
+	double xsum = 0, ysum = 0, x2sum = 0, y2sum = 0, xysum = 0, B = 0, number3 = 0;                //variables for sums/sigma of xi,yi,xi^2,xiyi etc
+	int number = (*transformed_points).size();
+	for (int i = 0; i < number; i++)
+	{
+		xsum = xsum + (*transformed_points)[i].x;                        //calculate sigma(xi)
+		ysum = ysum + (*transformed_points)[i].y;                        //calculate sigma(yi)
+		x2sum = x2sum + pow((*transformed_points)[i].x, 2);                //calculate sigma(x^2i)
+		y2sum = y2sum + pow((*transformed_points)[i].y, 2); 
+		xysum = xysum + (*transformed_points)[i].x * (*transformed_points)[i].y;                    //calculate sigma(xi*yi)
+		
+	}
+	number3 = pow(number, 3);
+	B = (y2sum - number3 * pow(ysum, 2) - x2sum + number3 * pow(xsum, 2)) / (number3 * ysum * xsum - xysum) / 2;
+	a = -B / number3;
+	b = ysum / number - a*xsum / number;
+	//a = (number * xysum - xsum * ysum) / (number * x2sum - xsum * xsum);            //calculate slope
+	//b = (x2sum * ysum - xsum * xysum) / (x2sum * number - xsum * xsum);            //calculate intercept
+
+	return 0;
+}
+
+//PCA 
+int LinearRegressionPCA(pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_points, double &a, double &b)
+{
+	// copy coordinates to  matrix in Eigen format
+	size_t num_atoms = (*transformed_points).size();
+	if (num_atoms == 0)
+	{
+		std::cout << "No points to fit." << std::endl;
+		return -1;
+	}
+	Eigen::Matrix< Eigen::Vector2d::Scalar, Eigen::Dynamic, Eigen::Dynamic > centers(num_atoms, 2);
+	for (size_t i = 0; i < num_atoms; ++i)
+		centers.row(i) = Eigen::Vector2d((*transformed_points)[i].x, (*transformed_points)[i].y);
+
+	Eigen::Vector2d centroid, axis;
+	//centroid质心
+	centroid = centers.colwise().mean();
+
+	//transpose转置阵
+	Eigen::MatrixXd centered = centers.rowwise() - centroid.transpose();
+
+
+	//adjoint共轭矩阵																	  
+	Eigen::MatrixXd cov = centered.adjoint() * centered;
+
+
+	//SelfAdjointEigenSolver:Computes eigenvalues and eigenvectors of selfadjoint matrices
+	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov);
+	/*std::cout << "centers:" << std::endl << centers << std::endl;
+	std::cout << "centroid:" << std::endl << centroid << std::endl;
+	std::cout << "centroid.transpose():" << std::endl << centroid.transpose() << std::endl;
+	std::cout << "centered:" << std::endl << centered << std::endl;
+	std::cout << "centered.adjoint():" << std::endl << centered.adjoint() << std::endl;
+	std::cout << "cov:" << std::endl << cov << std::endl;
+	std::cout << "eig.eigenvectors():" << std::endl << eig.eigenvectors() << std::endl;
+	std::cout << "eig.eigenvectors().col(2):" << std::endl << eig.eigenvectors().col(2) << std::endl;*/
+
+	//eigenvectors特征向量
+	axis = eig.eigenvectors().col(1).normalized();
+	//std::cout << "centroid:" << std::endl << centroid << std::endl;
+	//std::cout << "axis:" << std::endl << axis << std::endl;
+	a = axis[1] / axis[0];
+	b = centroid[1] - centroid[0] * axis[1] / axis[0];
 
 	return 0;
 }
@@ -523,7 +606,13 @@ int FindHeadAndTail(pcl::PointCloud<pcl::PointXYZ>::Ptr projected_points, pcl::P
 	return 0;
 }
 
-int Fitting3DPointsToLine(pcl::PointCloud<pcl::PointXYZ>::Ptr &points_list, std::vector<double> plane_normal, double &error, pcl::PointXYZ &head, pcl::PointXYZ &tail, bool flag)
+//flag_head_tail == 0: head and tail are the projection of the first two points in points_list
+//flag_head_tail == 1: head and tail are the projection of the head and tail points in points_list
+//fitting_mode == 0: 2d PCA
+//fitting_mode == 1: Linear Regression(Perpendicular least squares fitting)
+//fitting_mode == 2: Linear Regression(Vertical least squares fitting)
+int Fitting3DPointsToLine(pcl::PointCloud<pcl::PointXYZ>::Ptr &points_list, std::vector<double> plane_normal, double &error, 
+	                      pcl::PointXYZ &head, pcl::PointXYZ &tail, bool flag_head_tail, int fitting_mode)
 {
 	visualizePointCloud(points_list, "points_list", xy);
 	Eigen::Matrix3f transform_matrix1 = getTransformMatrixForAlignmentWithNormalToPlane((*points_list).points[0], (*points_list).points[1], plane_normal);
@@ -535,14 +624,29 @@ int Fitting3DPointsToLine(pcl::PointCloud<pcl::PointXYZ>::Ptr &points_list, std:
 	std::cout << sqrt(pow((*points_list)[0].x - (*points_list)[1].x,2) + pow((*points_list)[0].y - (*points_list)[1].y,2) +pow((*points_list)[0].z - (*points_list)[1].z,2)) << std::endl;
 	std::cout << sqrt(pow((*transformed_points)[0].x - (*transformed_points)[1].x, 2) + pow((*transformed_points)[0].y - (*transformed_points)[1].y, 2) + pow((*transformed_points)[0].z - (*transformed_points)[1].z,2)) << std::endl;*/
 	double a, b;
-	LinearRegression(transformed_points, a, b);
+	if (fitting_mode == 0)
+	{
+		LinearRegressionPCA(transformed_points, a, b);
+	}
+	else
+	{
+		if (fitting_mode == 1)
+		{
+			LinearRegressionPerpendicularLeastSquares(transformed_points, a, b);
+		}
+		else
+		{
+			LinearRegressionVerticalLeastSquares(transformed_points, a, b);		
+		}
+	}
+	
 	//pcl::PointCloud<pcl::PointXYZ>::Ptr line(new pcl::PointCloud<pcl::PointXYZ>);
 	//(*line).push_back(pcl::PointXYZ(0, b, 0));
 	//(*line).push_back(pcl::PointXYZ(1000, 1000*a+b, 0));
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr projected_points = ProjectPointsOntoLine(transformed_points, a, b, error);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_head_tail(new pcl::PointCloud<pcl::PointXYZ>);
-	if (flag == 0)
+	if (flag_head_tail == 0)
 	{
 		(*transformed_head_tail).push_back(projected_points->points[0]);
 		(*transformed_head_tail).push_back(projected_points->points[1]);
@@ -596,9 +700,10 @@ int main()
 	ReadTXTFileAsPointCloud(load_file.c_str(), points_list, plane_normal);
 	double error;
 	pcl::PointXYZ head, tail;
-	bool flag = 0;
+	bool flag = 1;
+	int mode = 0;
 
-	Fitting3DPointsToLine(points_list, plane_normal, error, head, tail, flag);
+	Fitting3DPointsToLine(points_list, plane_normal, error, head, tail, flag, mode);
 
 	return 0;
 }
