@@ -1,0 +1,64 @@
+#This is a file for setting input parameters in the surface fitting program.
+#Please, follow this standard format:
+#
+#PLANE_METHOD_TYPE (0 for RANSAC, 1 for PROSAC)
+#CYL_METHOD_TYPE (0 for RANSAC, 1 for PROSAC)
+#CONE_METHOD_TYPE (0 for RANSAC, 1 for PROSAC)
+#PLANE_TOL
+#CYL_TOL
+#CONE_TOL
+#MIN_INLIERS (a double in (0,1] to indicate the percentage of minimum required inliers in each fitted surface)
+#MST_RATIO (a double in (0,1] to indicate the maximum acceptable ratio [depth/total num of vertices], to eliminate strips)
+#MST_RATIO2 (a double in (0,1] to indicate the maximum acceptable ratio [average lenght edge/lenght edge], to identify groups of points to be split)
+#PLANE_MAX_NUM_ITER
+#CYL_MAX_NUM_ITER
+#CONE_MAX_NUM_ITER
+#K_FOR_NORMAL_SEARCH
+#CYL_WEIGHT_NORMAL_DISTANCE
+#CONE_WEIGHT_NORMAL_DISTANCE
+#CYL_MIN_RADIUS_LIMIT
+#CYL_MAX_RADIUS_LIMIT
+#CONE_MIN_RADIUS_LIMIT
+#CONE_MAX_RADIUS_LIMIT
+#CONE_MIN_OPENING_ANGLE (in degree, double format)
+#CONE_MAX_OPENING_ANGLE (in degree, double format)
+#TOLERANCE_FOR_ADJACENT_CHAINS
+#TOLERANCE_FOR_APPEX (DISTANCE FOR APPROXIMATION APPEX AND THE POINT OF THE POINT CLOUD)
+#POISSON_DISK_SAMPLING_RADIUS (0 for 200 per m^2, 1 for 200/10^6 per mm^2)
+#PATH_TEMPORARY_FILE
+#PLANE_AREA_PERCENTAGE
+#CYL_AREA_PERCENTAGE
+#CONE_AREA_PERCENTAGE
+#PERCENTAGE
+#
+#Here follows your parameters.
+#
+0
+0
+0
+10
+20
+20
+0.2
+0.5
+1
+50000
+50000
+50000
+50
+0.1
+0.1
+0
+100000
+0
+100000
+5.0
+89.0
+50
+.5
+30
+C:\\Development\\Surface_approximation\\temp\\
+0.8
+0.8
+0.8
+0.98
