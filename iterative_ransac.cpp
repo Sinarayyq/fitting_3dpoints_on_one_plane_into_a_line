@@ -23,6 +23,7 @@
 //
 //#include <io.h>
 //#include <visualize.h>
+////#include <iterative_ransac.h>
 //
 //using namespace std;
 //
@@ -107,6 +108,10 @@
 //	seg_plane.setMethodType(PLANE_METHOD_TYPE);
 //	seg_plane.setMaxIterations(PLANE_MAX_NUM_ITER);
 //	seg_plane.setDistanceThreshold(PLANE_TOL);
+//	/*std::cout << "PLANE_METHOD_TYPE:" << PLANE_METHOD_TYPE << std::endl;
+//	std::cout << "PLANE_MAX_NUM_ITER:" << PLANE_MAX_NUM_ITER << std::endl;
+//	std::cout << "PLANE_TOL:" << PLANE_TOL << std::endl;*/
+//
 //}
 //
 //void setSegmentationParametersForCylinder(pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal>& seg_cyl)
@@ -122,6 +127,11 @@
 //	//seg_cyl.getRadiusLimits(a, b);
 //	//std::cout << "a = " << a << "  b =" << b << std::endl;
 //	seg_cyl.setRadiusLimits(CYL_MIN_RADIUS_LIMIT, CYL_MAX_RADIUS_LIMIT);
+//	/*std::cout << "CYL_METHOD_TYPE:" << CYL_METHOD_TYPE << std::endl;
+//	std::cout << "CYL_WEIGHT_NORMAL_DISTANCE:" << CYL_WEIGHT_NORMAL_DISTANCE << std::endl;
+//	std::cout << "CYL_MAX_NUM_ITER:" << CYL_MAX_NUM_ITER << std::endl;
+//	std::cout << "CYL_TOL:" << CYL_TOL << std::endl;
+//	std::cout << "CYL_MIN_RADIUS_LIMIT:" << CYL_MIN_RADIUS_LIMIT << std::endl;*/
 //}
 //
 //void setSegmentationParametersForCone(pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal>& seg_cone)
@@ -138,6 +148,9 @@
 //	//seg_cone.getRadiusLimits(a, b);
 //	//std::cout << "a = " << a << "  b =" << b << std::endl;
 //	seg_cone.setRadiusLimits(CONE_MIN_RADIUS_LIMIT, CONE_MAX_RADIUS_LIMIT);
+//	/*std::cout << "CONE_METHOD_TYPE:" << CONE_METHOD_TYPE << std::endl;
+//	std::cout << "CONE_MIN_OPENING_ANGLE:" << CONE_MIN_OPENING_ANGLE << std::endl;
+//	std::cout << "CONE_MAX_NUM_ITER:" << CONE_MAX_NUM_ITER << std::endl;*/
 //}
 //
 //
@@ -158,6 +171,11 @@
 //		flag = 1;
 //		(*patchtype_temp).plane = 1;
 //		*((*patchtype_temp).coefficients_plane) = *coefficients_plane;
+//		pcl::ExtractIndices<pcl::PointXYZ> extract;
+//		extract.setInputCloud(cloud);
+//		extract.setIndices(inliers_plane);
+//		extract.setNegative(false);
+//		extract.filter(*((*patchtype_temp).cloud_plane));
 //	}
 //
 //		
@@ -175,6 +193,11 @@
 //		flag = 1;
 //		(*patchtype_temp).cylinder = 1;
 //		*((*patchtype_temp).coefficients_cylinder) = *coefficients_cylinder;
+//		pcl::ExtractIndices<pcl::PointXYZ> extract;
+//		extract.setInputCloud(cloud);
+//		extract.setIndices(inliers_cylinder);
+//		extract.setNegative(false);
+//		extract.filter(*((*patchtype_temp).cloud_cylinder));
 //	}
 //
 //			
@@ -192,6 +215,11 @@
 //		flag = 1;
 //		(*patchtype_temp).cone = 1;
 //		*((*patchtype_temp).coefficients_cone) = *coefficients_cone;
+//		pcl::ExtractIndices<pcl::PointXYZ> extract;
+//		extract.setInputCloud(cloud);
+//		extract.setIndices(inliers_cone);
+//		extract.setNegative(false);
+//		extract.filter(*((*patchtype_temp).cloud_cone));
 //	}
 //
 //		
@@ -202,7 +230,109 @@
 //}
 //
 //
+//int OutputPatchTypeOnTXT(std::vector<PatchType> patchtype)
+//{
+//	std::ofstream outdata;
+//	std::string name_file = "patchtype.txt";
+//	outdata.open(name_file, ios::app);
+//	outdata.clear();
+//	int size_patch = patchtype.size();
 //
+//	string sum;
+//
+//	for (int i = 0; i < size_patch; i++)
+//	{
+//		if (patchtype[i].plane)
+//		{
+//			sum += "P ";
+//		}
+//		else
+//		{
+//			//outdata << " ";
+//			if (patchtype[i].cylinder)
+//			{
+//				sum += "C ";
+//			}
+//			else
+//			{
+//				//outdata << " ";
+//				if (patchtype[i].cone)
+//				{
+//					sum += "N ";
+//				}
+//			}
+//		}
+//	}
+//	sum.erase(sum.end()-1);
+//	outdata << sum << std::endl;
+//
+//	int size_cloud;
+//	for (int i = 0; i < size_patch; i++)
+//	{
+//		if (patchtype[i].plane)
+//		{
+//			outdata << "P" << std::endl;
+//			size_cloud = (patchtype[i].cloud_plane)->size();
+//			outdata << size_cloud << std::endl;
+//			outdata << (patchtype[i].coefficients_plane)->values[0] << " " << 
+//				(patchtype[i].coefficients_plane)->values[1] << " " <<
+//				(patchtype[i].coefficients_plane)->values[2] << " " << 
+//				(patchtype[i].coefficients_plane)->values[3] << std::endl;
+//			for (int j = 0; j < size_cloud; j++)
+//			{
+//				outdata << (patchtype[i].cloud_plane)->points[j].x << " " << (patchtype[i].cloud_plane)->points[j].y << " " <<
+//					(patchtype[i].cloud_plane)->points[j].z << std::endl;
+//			}
+//		}
+//		else
+//		{
+//			if (patchtype[i].cylinder)
+//			{
+//				outdata << "C" << std::endl;
+//				size_cloud = (patchtype[i].cloud_cylinder)->size();
+//				outdata << size_cloud << std::endl;
+//				outdata << (patchtype[i].coefficients_cylinder)->values[0] << " " << 
+//					(patchtype[i].coefficients_cylinder)->values[1] << " " <<
+//					(patchtype[i].coefficients_cylinder)->values[2] << " " << 
+//					(patchtype[i].coefficients_cylinder)->values[3] << " " <<
+//					(patchtype[i].coefficients_cylinder)->values[4] << " " <<
+//					(patchtype[i].coefficients_cylinder)->values[5] << " " <<
+//					(patchtype[i].coefficients_cylinder)->values[6] << std::endl;
+//				for (int j = 0; j < size_cloud; j++)
+//				{
+//					outdata << (patchtype[i].cloud_cylinder)->points[j].x 
+//						<< " " << (patchtype[i].cloud_cylinder)->points[j].y
+//						<< " " << (patchtype[i].cloud_cylinder)->points[j].z << std::endl;
+//				}
+//			}
+//			else
+//			{
+//				if (patchtype[i].cone)
+//				{
+//					outdata << "N" << std::endl;
+//					size_cloud = (patchtype[i].cloud_cone)->size();
+//					outdata << size_cloud << std::endl;
+//					outdata << (patchtype[i].coefficients_cone)->values[0] << " " <<
+//						(patchtype[i].coefficients_cone)->values[1] << " " <<
+//						(patchtype[i].coefficients_cone)->values[2] << " " <<
+//						(patchtype[i].coefficients_cone)->values[3] << " " <<
+//						(patchtype[i].coefficients_cone)->values[4] << " " <<
+//						(patchtype[i].coefficients_cone)->values[5] << " " <<
+//						(patchtype[i].coefficients_cone)->values[6] << std::endl;
+//					for (int j = 0; j < size_cloud; j++)
+//					{
+//						outdata << (patchtype[i].cloud_cone)->points[j].x
+//							<< " " << (patchtype[i].cloud_cone)->points[j].y
+//							<< " " << (patchtype[i].cloud_cone)->points[j].z << std::endl;
+//					}
+//				}
+//			}
+//		}
+//	}
+//
+//
+//	return 0;
+//}
 //
 //int main(int argc, char** argv)
 //{
@@ -252,6 +382,7 @@
 //		
 //	}
 //	patchtype.push_back(patchtype_last);
+//	OutputPatchTypeOnTXT(patchtype);
 //	time_t end = clock();
 //	std::cout << (double)(end - start) / CLOCKS_PER_SEC * 1000.0 << std::endl;
 //
@@ -259,7 +390,7 @@
 //	std::system("pause");
 //	return 0;
 //}
-
+//
 
 
 
@@ -293,6 +424,8 @@
 //
 //#include <pcl/kdtree/kdtree_flann.h>
 //
+////#include <pcl/features/moment_of_inertia_estimation.h>
+//
 //int main(int argc, char** argv)
 //{
 //	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -304,6 +437,44 @@
 //	std::string load_file;
 //	std::getline(std::cin, load_file);
 //	reader.read(load_file, *cloud); // Remember to download the file first!
+//
+//
+//
+//
+//
+//	//pcl::MomentOfInertiaEstimation <pcl::PointXYZ> feature_extractor;
+//	//feature_extractor.setInputCloud(cloud);
+//	//feature_extractor.compute();
+//
+//	////std::vector <float> moment_of_inertia;
+//	////std::vector <float> eccentricity;
+//	//
+//	//pcl::PointXYZ min_point_AABB;
+//	//pcl::PointXYZ max_point_AABB;
+//	//pcl::PointXYZ min_point_OBB;
+//	//pcl::PointXYZ max_point_OBB;
+//	//pcl::PointXYZ position_OBB;
+//	//Eigen::Matrix3f rotational_matrix_OBB;
+//	//float major_value, middle_value, minor_value;
+//	//Eigen::Vector3f major_vector, middle_vector, minor_vector;
+//	//Eigen::Vector3f mass_center;
+//
+//	//feature_extractor.getMomentOfInertia(moment_of_inertia);
+//	//feature_extractor.getEccentricity(eccentricity);
+//	/*feature_extractor.getAABB(min_point_AABB, max_point_AABB);
+//	pcl::PointCloud<pcl::PointXYZ>::Ptr bounding_box_AABB(new pcl::PointCloud<pcl::PointXYZ>);
+//	bounding_box_AABB->push_back(min_point_AABB);
+//	bounding_box_AABB->push_back(max_point_AABB);
+//	std::cout << min_point_AABB.x << " " << min_point_AABB.y << " " << min_point_AABB.z << std::endl;
+//	std::cout << max_point_AABB.x << " " << max_point_AABB.y << " " << max_point_AABB.z << std::endl;
+//	visualizePointCloud(cloud, bounding_box_AABB, "patch", xy);*/
+//
+//	//feature_extractor.getEigenValues(major_value, middle_value, minor_value);
+//	//feature_extractor.getEigenVectors(major_vector, middle_vector, minor_vector);
+//	//feature_extractor.getMassCenter(mass_center);
+//
+//
+//	
 //	//std::cout << cloud->points[0].x << " " << cloud->points[0].y << " " << cloud->points[0].z << std::endl;
 //	/*std::cerr << "PointCloud before filtering: " << cloud->width * cloud->height
 //		<< " data points (" << pcl::getFieldsList(*cloud) << ").";*/
@@ -319,6 +490,7 @@
 //	/*sor.setInputCloud(cloud);
 //	sor.setLeafSize(120, 120, 120);
 //	sor.filter(*cloud_filtered);*/
+//	//int leaf_size = (max_point_AABB.x - min_point_AABB.x
 //	pcl::VoxelGrid<pcl::PointXYZ> sample;
 //	sample.setInputCloud(cloud);
 //	sample.setLeafSize(120, 120, 120);
@@ -332,7 +504,7 @@
 //
 //	size_t size_cloud_filtered = cloud_filtered->size();
 //	std::vector<int> index(K);
-//	std::vector<double> d(K);
+//	std::vector<float> d(K);
 //	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_final(new pcl::PointCloud<pcl::PointXYZ>);
 //	for (size_t i = 0; i < size_cloud_filtered; i++)
 //	{
@@ -614,15 +786,15 @@ int FindHeadAndTail(pcl::PointCloud<pcl::PointXYZ>::Ptr projected_points, pcl::P
 int Fitting3DPointsToLine(pcl::PointCloud<pcl::PointXYZ>::Ptr &points_list, std::vector<double> plane_normal, double &error, 
 	                      pcl::PointXYZ &head, pcl::PointXYZ &tail, bool flag_head_tail, int fitting_mode)
 {
-	visualizePointCloud(points_list, "points_list", xy);
+	
 	Eigen::Matrix3f transform_matrix1 = getTransformMatrixForAlignmentWithNormalToPlane((*points_list).points[0], (*points_list).points[1], plane_normal);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_points = transformCloudByMatrix(points_list, transform_matrix1, (*points_list).points[0]);
-	//pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_points = transformPlanarPatchPoints(points_list, plane_normal);
+
 	
-	//visualizePointCloud(transformed_points, "transformed_points", xy);
-	/*visualizePointCloud(points_list, transformed_points, "transformed_points", xy);
-	std::cout << sqrt(pow((*points_list)[0].x - (*points_list)[1].x,2) + pow((*points_list)[0].y - (*points_list)[1].y,2) +pow((*points_list)[0].z - (*points_list)[1].z,2)) << std::endl;
-	std::cout << sqrt(pow((*transformed_points)[0].x - (*transformed_points)[1].x, 2) + pow((*transformed_points)[0].y - (*transformed_points)[1].y, 2) + pow((*transformed_points)[0].z - (*transformed_points)[1].z,2)) << std::endl;*/
+	
+	//visualizePointCloud(transformed_points, points_list, "transformed_points", xy);
+	//std::cout << sqrt(pow((*points_list)[0].x - (*points_list)[1].x,2) + pow((*points_list)[0].y - (*points_list)[1].y,2) +pow((*points_list)[0].z - (*points_list)[1].z,2)) << std::endl;
+	//std::cout << sqrt(pow((*transformed_points)[0].x - (*transformed_points)[1].x, 2) + pow((*transformed_points)[0].y - (*transformed_points)[1].y, 2) + pow((*transformed_points)[0].z - (*transformed_points)[1].z,2)) << std::endl;
 	double a, b;
 	if (fitting_mode == 0)
 	{
@@ -643,6 +815,7 @@ int Fitting3DPointsToLine(pcl::PointCloud<pcl::PointXYZ>::Ptr &points_list, std:
 	//pcl::PointCloud<pcl::PointXYZ>::Ptr line(new pcl::PointCloud<pcl::PointXYZ>);
 	//(*line).push_back(pcl::PointXYZ(0, b, 0));
 	//(*line).push_back(pcl::PointXYZ(1000, 1000*a+b, 0));
+	//visualizePointCloud(transformed_points, line, "line", xy);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr projected_points = ProjectPointsOntoLine(transformed_points, a, b, error);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_head_tail(new pcl::PointCloud<pcl::PointXYZ>);
@@ -656,36 +829,63 @@ int Fitting3DPointsToLine(pcl::PointCloud<pcl::PointXYZ>::Ptr &points_list, std:
 		FindHeadAndTail(projected_points, transformed_head_tail);
 	}
 	
-	//visualizePointCloud(transformed_points, transformed_head_tail, "transformed_head_tail", xy);
+	
 
 
 
 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr coordinate_system((new pcl::PointCloud<pcl::PointXYZ>));
-	(*coordinate_system).push_back(pcl::PointXYZ(0, 0, 0));
-	(*coordinate_system).push_back(pcl::PointXYZ(1, 0, 0));   //x
-	(*coordinate_system).push_back(pcl::PointXYZ(0, 0, 1));   //z
-	pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_coordinate_system = transformCloudByMatrix(coordinate_system, transform_matrix1, (*points_list).points[0]);
+	//pcl::PointCloud<pcl::PointXYZ>::Ptr coordinate_system((new pcl::PointCloud<pcl::PointXYZ>));
+	//(*coordinate_system).push_back(pcl::PointXYZ(0, 0, 0));
+	//(*coordinate_system).push_back(pcl::PointXYZ(1, 0, 0));   //x
+	//(*coordinate_system).push_back(pcl::PointXYZ(0, 0, 1));   //z
+	//pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_coordinate_system = transformCloudByMatrix(coordinate_system, transform_matrix1, (*points_list).points[0]);
+	//
+	//
+	////std::vector<double> transformed_coordinate_normal;
+	//std::vector<double> normal;
+	//normal.push_back((*transformed_coordinate_system)[2].x - (*transformed_coordinate_system)[0].x);
+	//normal.push_back((*transformed_coordinate_system)[2].y - (*transformed_coordinate_system)[0].y);
+	//normal.push_back((*transformed_coordinate_system)[2].z - (*transformed_coordinate_system)[0].z);
+
+
+
+
+
+	//Eigen::Matrix3f transform_matrix2 = getTransformMatrixForAlignmentWithNormalToPlane((*transformed_coordinate_system)[0], (*transformed_coordinate_system)[1], normal);
+	//pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_transformed_points = transformCloudByMatrix(transformed_points, transform_matrix2, (*transformed_coordinate_system)[0]);
+	
+	//pcl::PointCloud<pcl::PointXYZ>::Ptr head_tail = transformCloudByMatrix(transformed_head_tail, transform_matrix2, (*transformed_coordinate_system)[0]);
+
+
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr head_tail(new pcl::PointCloud<pcl::PointXYZ>);
+	Eigen::Vector3f point, temp;
+	for (std::size_t i = 0; i < transformed_head_tail->size(); ++i)
+	{
+		point = Eigen::Vector3f(transformed_head_tail->at(i).getArray3fMap());
+		
+		temp = transform_matrix1.transpose()*point;
+
+		//std::cout << transformed_point << std::endl;
+		(*head_tail).push_back(pcl::PointXYZ(temp[0] + (*points_list).points[0].x, temp[1] + (*points_list).points[0].y, temp[2]+ (*points_list).points[0].z));
+	}
+
+
+
+
+	
+	//head = (*head_tail)[0];
+	//tail = (*head_tail)[1];
+
+	visualizePointCloud(points_list, "points_list", xy);
+	//visualizePointCloud(transformed_points, "transformed_points", xy);
 	//visualizePointCloud(points_list, coordinate_system, "coordinate_system", xy);
 	//visualizePointCloud(transformed_points, transformed_coordinate_system, "transformed_coordinate_system", xy);
-	//std::vector<double> transformed_coordinate_normal;
-	std::vector<double> normal;
-	normal.push_back((*transformed_coordinate_system)[2].x - (*transformed_coordinate_system)[0].x);
-	normal.push_back((*transformed_coordinate_system)[2].y - (*transformed_coordinate_system)[0].y);
-	normal.push_back((*transformed_coordinate_system)[2].z - (*transformed_coordinate_system)[0].z);
-
-
-
-
-
-	Eigen::Matrix3f transform_matrix2 = getTransformMatrixForAlignmentWithNormalToPlane((*transformed_coordinate_system)[0], (*transformed_coordinate_system)[1], normal);
-	pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_transformed_points = transformCloudByMatrix(transformed_points, transform_matrix2, (*transformed_coordinate_system)[0]);
-	visualizePointCloud(points_list, transformed_transformed_points, "transformed_transformed_points", xy);
-	pcl::PointCloud<pcl::PointXYZ>::Ptr head_tail = transformCloudByMatrix(transformed_head_tail, transform_matrix2, (*transformed_coordinate_system)[0]);
-
+	//visualizePointCloud(points_list, "points_list", xy);
+	//visualizePointCloud(points_list, transformed_transformed_points, "transformed_transformed_points", xy);
 	visualizePointCloud(points_list, head_tail, "head_tail", xy);
-	head = (*head_tail)[0];
-	tail = (*head_tail)[1];
+	//visualizePointCloud(transformed_points, transformed_head_tail, "transformed_head_tail", xy);
+	
 
 
 	return 0;
